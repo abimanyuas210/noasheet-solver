@@ -96,7 +96,7 @@ class ScreenshotService {
       });
 
       // Wait for initial page load
-      await page.waitForTimeout(3000);
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Get page title
       const title = await page.title();
@@ -157,18 +157,18 @@ class ScreenshotService {
 
       // Wait for the answers to be displayed
       console.log('Waiting for answers to be displayed...');
-      await page.waitForTimeout(4000);
+      await new Promise(resolve => setTimeout(resolve, 4000));
 
       // Try to scroll to make sure we get the full page
       await page.evaluate(() => {
         window.scrollTo(0, document.body.scrollHeight);
       });
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       await page.evaluate(() => {
         window.scrollTo(0, 0);
       });
-      await page.waitForTimeout(1000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Create screenshots directory if it doesn't exist
       const screenshotsDir = path.join(process.cwd(), 'screenshots');
