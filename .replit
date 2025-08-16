@@ -4,36 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = [
-  "glib",
-  "gtk3",
-  "xorg.libX11",
-  "xorg.libXcomposite",
-  "xorg.libXdamage",
-  "xorg.libXext",
-  "xorg.libXfixes",
-  "xorg.libXrandr",
-  "xorg.libxcb",
-  "dbus",
-  "atk",
-  "at-spi2-atk",
-  "cups",
-  "expat",
-  "fontconfig",
-  "freetype",
-  "gdk-pixbuf",
-  "nspr",
-  "nss",
-  "pango",
-  "cairo",
-  "libxkbcommon",
-  "mesa",
-  "libGL",
-  "alsa-lib",          # buat libasound.so.2
-  "libxshmfence",      # tambahan buat chromium
-  "libxss",            # screensaver dep
-  "libxtst"            # xtest dep
-]
+packages = ["glib", "gtk3", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "dbus", "atk", "at-spi2-atk", "cups", "expat", "fontconfig", "freetype", "gdk-pixbuf", "nspr", "nss", "pango", "cairo", "libxkbcommon", "mesa", "libGL", "alsa-lib", "libxshmfence", "libxss", "libxtst", "libdrm", "xorg.libXi", "xorg.libXrender", "libuuid"]
 
 [deployment]
 deploymentTarget = "autoscale"

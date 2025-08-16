@@ -16,8 +16,20 @@ class ScreenshotService {
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--disable-gpu',
           '--disable-audio-output',
+          '--disable-background-timer-throttling',
+          '--disable-web-security',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection'
         ],
+        ignoreDefaultArgs: ['--disable-extensions'],
+        timeout: 60000
       });
     }
     return this.browser;
@@ -102,62 +114,53 @@ class ScreenshotService {
       const title = await page.title();
       console.log(`Page title: ${title}`);
 
-      // Inject jQuery if not available and execute worksheet code
-      await page.evaluate(() => {
-        return new Promise((resolve) => {
-          function runWorksheetCode() {
-            try {
-              // Check if jQuery is available
-              if (typeof window.jQuery !== 'undefined' || typeof window.$ !== 'undefined') {
-                var jq = typeof window.jQuery !== 'undefined' ? window.jQuery : window.$;
-                console.log('jQuery found, looking for worksheet-preview...');
-                
-                // Try to find the worksheet preview element
-                var worksheetPreview = jq("#worksheet-preview");
-                console.log('Worksheet preview elements found:', worksheetPreview.length);
-                
-                if (worksheetPreview.length > 0) {
-                  // Check if worksheetPreview function exists
-                  if (typeof worksheetPreview.worksheetPreview === 'function') {
-                    console.log('Calling worksheetPreview function...');
-                    worksheetPreview.worksheetPreview("validation", {
-                      clicked: false,
-                      showAnswers: true,
-                      showRightAnswers: true
-                    });
-                    console.log('WorksheetPreview function called successfully');
-                  } else {
-                    console.log('worksheetPreview function not available');
-                  }
-                } else {
-                  console.log('No worksheet-preview elements found');
-                }
-                resolve();
-              } else {
-                console.log('jQuery not found, attempting to load it...');
-                // Try to load jQuery if not available
-                var script = document.createElement('script');
-                script.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-                script.onload = function() {
-                  console.log('jQuery loaded successfully');
-                  setTimeout(runWorksheetCode, 1000);
-                };
-                document.head.appendChild(script);
-              }
-            } catch (error) {
-              console.error('Error in worksheet code:', error);
-              resolve();
-            }
-          }
-
-          // Run immediately
-          runWorksheetCode();
+      // Check if jQuery is available first
+      const hasJquery = await page.evaluate(() => {
+        const win = window as any;
+        return typeof win.jQuery !== 'undefined' || typeof win.$ !== 'undefined';
+      });
+      
+      // Load jQuery if not available
+      if (!hasJquery) {
+        console.log('jQuery not found, loading it...');
+        await page.addScriptTag({
+          url: 'https://code.jquery.com/jquery-3.6.0.min.js'
         });
+        console.log('jQuery loaded successfully');
+      }
+      
+      // Wait a moment for jQuery to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Now execute the worksheet code with a simple string-based approach
+      await page.evaluate(() => {
+        try {
+          const win = window as any;
+          if (win.jQuery && win.jQuery('#worksheet-preview').length > 0) {
+            console.log('Found worksheet preview element');
+            const worksheetPreview = win.jQuery('#worksheet-preview');
+            if (typeof worksheetPreview.worksheetPreview === 'function') {
+              console.log('Calling worksheetPreview function...');
+              worksheetPreview.worksheetPreview('validation', {
+                clicked: false,
+                showAnswers: true,
+                showRightAnswers: true
+              });
+              console.log('WorksheetPreview function called successfully');
+            } else {
+              console.log('worksheetPreview function not available');
+            }
+          } else {
+            console.log('jQuery or worksheet-preview not found');
+          }
+        } catch (error) {
+          console.error('Error in worksheet execution:', error);
+        }
       });
 
       // Wait for the answers to be displayed
       console.log('Waiting for answers to be displayed...');
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Try to scroll to make sure we get the full page
       await page.evaluate(() => {
@@ -178,8 +181,7 @@ class ScreenshotService {
       // Take full page screenshot
       const screenshotBuffer = await page.screenshot({
         fullPage: true,
-        type: 'png',
-        quality: 90
+        type: 'png'
       });
 
       // Save screenshot
