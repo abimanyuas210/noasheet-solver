@@ -16,21 +16,8 @@ class ScreenshotService {
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--window-size=1920,1080',
-          '--disable-extensions',
-          '--disable-plugins',
-          '--disable-images=false',
-          '--disable-javascript=false'
+          '--disable-audio-output',
         ],
-        defaultViewport: {
-          width: 1920,
-          height: 1080
-        }
       });
     }
     return this.browser;
