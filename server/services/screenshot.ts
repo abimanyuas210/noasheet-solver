@@ -104,16 +104,16 @@ class ScreenshotService {
 
       // Inject jQuery if not available and execute worksheet code
       await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          const runWorksheetCode = () => {
+        return new Promise((resolve) => {
+          function runWorksheetCode() {
             try {
               // Check if jQuery is available
-              if (typeof jQuery !== 'undefined' || typeof $ !== 'undefined') {
-                const jq = typeof jQuery !== 'undefined' ? jQuery : $;
+              if (typeof window.jQuery !== 'undefined' || typeof window.$ !== 'undefined') {
+                var jq = typeof window.jQuery !== 'undefined' ? window.jQuery : window.$;
                 console.log('jQuery found, looking for worksheet-preview...');
                 
                 // Try to find the worksheet preview element
-                const worksheetPreview = jq("#worksheet-preview");
+                var worksheetPreview = jq("#worksheet-preview");
                 console.log('Worksheet preview elements found:', worksheetPreview.length);
                 
                 if (worksheetPreview.length > 0) {
@@ -132,25 +132,25 @@ class ScreenshotService {
                 } else {
                   console.log('No worksheet-preview elements found');
                 }
+                resolve();
               } else {
                 console.log('jQuery not found, attempting to load it...');
                 // Try to load jQuery if not available
-                const script = document.createElement('script');
+                var script = document.createElement('script');
                 script.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-                script.onload = () => {
+                script.onload = function() {
                   console.log('jQuery loaded successfully');
                   setTimeout(runWorksheetCode, 1000);
                 };
                 document.head.appendChild(script);
-                return;
               }
             } catch (error) {
               console.error('Error in worksheet code:', error);
+              resolve();
             }
-            resolve();
-          };
+          }
 
-          // Run immediately and also after a delay
+          // Run immediately
           runWorksheetCode();
         });
       });
