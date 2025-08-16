@@ -1,43 +1,32 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
-run = "npm run dev"
-hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
-
 [nix]
 channel = "stable-24_05"
-packages = ["glib", "gtk3", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libxcb", "dbus", "atk", "at-spi2-atk", "cups", "expat", "fontconfig", "freetype", "gdk-pixbuf", "nspr", "nss", "pango", "cairo", "libxkbcommon", "mesa", "libGL"]
-
-[deployment]
-deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
-
-[[ports]]
-localPort = 5000
-externalPort = 80
-
-[env]
-PORT = "5000"
-
-[workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start application"
-
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
+packages = [
+  "glib",
+  "gtk3",
+  "xorg.libX11",
+  "xorg.libXcomposite",
+  "xorg.libXdamage",
+  "xorg.libXext",
+  "xorg.libXfixes",
+  "xorg.libXrandr",
+  "xorg.libxcb",
+  "dbus",
+  "atk",
+  "at-spi2-atk",
+  "cups",
+  "expat",
+  "fontconfig",
+  "freetype",
+  "gdk-pixbuf",
+  "nspr",
+  "nss",
+  "pango",
+  "cairo",
+  "libxkbcommon",
+  "mesa",
+  "libGL",
+  "alsa-lib"       # <--- ini libasound
+]
 
 [agent]
 integrations = ["javascript_mem_db==1.0.0"]
