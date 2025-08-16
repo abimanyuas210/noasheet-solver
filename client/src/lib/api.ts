@@ -1,5 +1,13 @@
 import { apiRequest } from "./queryClient";
 
+// Get base URL for API calls
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:5000';
+};
+
 export const api = {
   // Screenshots
   createScreenshot: (data: { url: string; userId: string }) =>

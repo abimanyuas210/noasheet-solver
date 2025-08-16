@@ -40,6 +40,20 @@ export default function ScreenshotForm({ userId, onScreenshotStart, disabled }: 
         description: "Your screenshot is being processed...",
       });
       onScreenshotStart(data.id);
+      
+      // Trigger processing for Vercel deployment
+      if (process.env.NODE_ENV === 'production') {
+        try {
+          await fetch('/api/process-screenshot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ screenshotId: data.id })
+          });
+        } catch (error) {
+          console.error('Failed to trigger screenshot processing:', error);
+        }
+      }
+      
       form.reset();
     },
     onError: (error) => {
