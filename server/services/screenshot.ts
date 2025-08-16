@@ -63,12 +63,132 @@ class ScreenshotService {
     await storage.updateScreenshot(screenshotId, { status: 'processing' });
 
     try {
-      // Use a simple approach with URL to image conversion
-      // Since external APIs might not work reliably, we'll create a mock screenshot
-      await this.createMockScreenshot(screenshotId, screenshot.url);
+      // Try to capture real screenshot using API service
+      await this.captureRealScreenshot(screenshotId, screenshot.url);
       
     } catch (error) {
-      console.error('Screenshot capture failed:', error);
+      console.error('Screenshot capture failed, falling back to mock:', error);
+      // Fallback to mock screenshot if API fails
+      await this.createMockScreenshot(screenshotId, screenshot.url);
+    }
+  }
+
+  private async captureRealScreenshot(screenshotId: string, url: string): Promise<void> {
+    try {
+      // Use a free screenshot API service that doesn't require authentication
+      const apiUrl = 'https://api.screenshotmachine.com';
+      // Add script injection for LiveWorksheet answer display
+      const injectedScript = encodeURIComponent('setTimeout(() => { if (typeof jQuery !== "undefined" && jQuery("#worksheet-preview").length > 0 && typeof jQuery("#worksheet-preview").worksheetPreview === "function") { jQuery("#worksheet-preview").worksheetPreview("validation", {clicked: false, showAnswers: true, showRightAnswers: true}); } }, 2000);');
+      const screenshotUrl = `${apiUrl}?key=demo&url=${encodeURIComponent(url)}&dimension=1920x1080&format=png&cacheLimit=0&delay=5000&fullpage=true&script=${injectedScript}`;
+      
+      // Multiple fallback services for better reliability
+      let response;
+      let serviceUsed = 'primary';
+      
+      // Primary service: Screenshot Machine (demo key)
+      try {
+        response = await fetch(screenshotUrl, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        if (response.ok) {
+          serviceUsed = 'screenshotmachine';
+        } else {
+          throw new Error('Primary service failed');
+        }
+      } catch (error) {
+        console.log('Screenshot Machine failed, trying alternative services...');
+        
+        // Fallback 1: Try a simple screenshot proxy
+        try {
+          const proxyUrl = `https://api.apiflash.com/v1/urltoimage?access_key=demo&url=${encodeURIComponent(url)}&format=png&width=1920&height=1080&full_page=true&delay=5&fresh=true&js=${injectedScript}`;
+          response = await fetch(proxyUrl);
+          
+          if (response.ok) {
+            serviceUsed = 'apiflash';
+          } else {
+            throw new Error('APIFlash failed');
+          }
+        } catch (apiflashError) {
+          console.log('APIFlash failed, trying Google PageSpeed...');
+          
+          // Fallback 2: Google PageSpeed Insights
+          try {
+            const pagespeedUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&screenshot=true&category=performance`;
+            const pagespeedResponse = await fetch(pagespeedUrl);
+            
+            if (pagespeedResponse.ok) {
+              const data = await pagespeedResponse.json();
+              if (data.lighthouseResult?.audits?.['final-screenshot']?.details?.data) {
+                const screenshotData = data.lighthouseResult.audits['final-screenshot'].details.data;
+                const base64Data = screenshotData.replace(/^data:image\/[a-z]+;base64,/, '');
+                const screenshotBuffer = Buffer.from(base64Data, 'base64');
+                
+                response = {
+                  ok: true,
+                  arrayBuffer: async () => screenshotBuffer
+                };
+                serviceUsed = 'pagespeed';
+              }
+            }
+          } catch (pagespeedError) {
+            throw new Error('All screenshot services failed');
+          }
+        }
+      }
+      
+      console.log(`Screenshot captured using: ${serviceUsed}`);
+
+      if (!response.ok) {
+        throw new Error(`Screenshot API returned status: ${response.status}`);
+      }
+
+      const screenshotBuffer = Buffer.from(await response.arrayBuffer());
+      
+      // Create screenshots directory if it doesn't exist
+      const screenshotsDir = path.join(process.cwd(), 'screenshots');
+      await fs.mkdir(screenshotsDir, { recursive: true });
+
+      // Save full screenshot
+      const imagePath = path.join(screenshotsDir, `${screenshotId}.png`);
+      await fs.writeFile(imagePath, screenshotBuffer);
+
+      // Create thumbnail using Sharp
+      const thumbnailBuffer = await sharp(screenshotBuffer)
+        .resize(400, 300, { 
+          fit: 'cover',
+          position: 'top'
+        })
+        .png()
+        .toBuffer();
+
+      const thumbnailPath = path.join(screenshotsDir, `${screenshotId}_thumb.png`);
+      await fs.writeFile(thumbnailPath, thumbnailBuffer);
+
+      // Try to extract page title (simplified approach)
+      let pageTitle = 'LiveWorksheet Screenshot';
+      try {
+        const titleMatch = url.match(/liveworksheets\.com.*\/(.+)/);
+        if (titleMatch) {
+          pageTitle = titleMatch[1].replace(/[-_]/g, ' ').replace(/\..+$/, '');
+        }
+      } catch (e) {
+        // Ignore title extraction errors
+      }
+
+      // Update screenshot record
+      await storage.updateScreenshot(screenshotId, {
+        status: 'completed',
+        title: pageTitle,
+        imagePath: `/screenshots/${screenshotId}.png`,
+        thumbnailPath: `/screenshots/${screenshotId}_thumb.png`
+      });
+
+    } catch (error) {
+      console.error('Real screenshot failed:', error);
       throw error;
     }
   }
